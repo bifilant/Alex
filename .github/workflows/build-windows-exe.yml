@@ -1,0 +1,99 @@
+name: Build Windows Portable EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-windows-exe:
+    name: Build Windows EXE
+    runs-on: windows-2022
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11 x64
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'
+
+      - name: Install build dependencies
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install pyinstaller numpy matplotlib openpyxl pillow
+
+      - name: Show Python/Tk info
+        shell: powershell
+        run: |
+          python --version
+          python - <<'PY'
+          import sys
+          print(sys.executable)
+          import tkinter
+          print("tkinter OK", tkinter.TkVersion)
+          import matplotlib
+          print("matplotlib", matplotlib.__version__)
+          import numpy
+          print("numpy", numpy.__version__)
+          import openpyxl
+          print("openpyxl", openpyxl.__version__)
+          PY
+
+      - name: Build portable folder with PyInstaller
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if (!(Test-Path "capillimetry_windows.py")) {
+            throw "capillimetry_windows.py not found"
+          }
+
+          pyinstaller `
+            --noconfirm `
+            --clean `
+            --onedir `
+            --windowed `
+            --name Capillimetry `
+            --hidden-import=tkinter `
+            --hidden-import=tkinter.ttk `
+            --hidden-import=matplotlib `
+            --hidden-import=matplotlib.backends.backend_tkagg `
+            --hidden-import=numpy `
+            --hidden-import=openpyxl `
+            --collect-all matplotlib `
+            --collect-all numpy `
+            --collect-all openpyxl `
+            capillimetry_windows.py
+
+          if (!(Test-Path "dist\Capillimetry\Capillimetry.exe")) {
+            throw "EXE was not created"
+          }
+
+          Copy-Item "PORTABLE_WINDOWS_README.txt" "dist\Capillimetry\README.txt" -Force
+
+      - name: Smoke test import source
+        shell: powershell
+        run: |
+          python -m py_compile capillimetry_windows.py
+
+      - name: Zip portable folder
+        shell: powershell
+        run: |
+          if (Test-Path "CapillimetryPortable.zip") {
+            Remove-Item "CapillimetryPortable.zip" -Force
+          }
+          Compress-Archive -Path "dist\Capillimetry\*" -DestinationPath "CapillimetryPortable.zip" -Force
+          Get-Item "CapillimetryPortable.zip"
+
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: CapillimetryPortableZip
+          path: CapillimetryPortable.zip
+          if-no-files-found: error
