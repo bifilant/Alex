@@ -77,7 +77,7 @@ jobs:
           p.write_bytes(raw)
           print('spec first bytes in docker:', p.read_bytes()[:8])
           PY
-          buildozer -v android debug"
+          yes | buildozer -v android debug"
 
       - name: Show generated files
         if: always()
