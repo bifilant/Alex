@@ -22,3 +22,4 @@ warn_on_root = 1
 android.ndk_api = 23
 p4a.bootstrap = sdl2
 
+
