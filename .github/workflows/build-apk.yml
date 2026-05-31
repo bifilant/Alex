@@ -7,24 +7,16 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip python3-venv git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev build-essential
-
-      - name: Install Buildozer
-        run: |
-          python3 -m pip install --upgrade pip setuptools wheel
-          python3 -m pip install "cython==0.29.37" "buildozer==1.6.0"
-
       - name: Patch buildozer.spec
+        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -54,12 +46,16 @@ jobs:
           p.write_text(s, encoding="utf-8")
           PY
 
-      - name: Build APK
-        run: |
-          buildozer -v android debug
+      - name: Build with Buildozer Docker Action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          workdir: .
+          buildozer_version: stable
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: CapillAPK-debug-apk
-          path: bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
