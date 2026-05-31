@@ -49,8 +49,8 @@ jobs:
           s = set_key(s, "requirements", "python3,kivy")
           s = set_key(s, "android.archs", "arm64-v8a")
           s = set_key(s, "android.api", "33")
-          s = set_key(s, "android.minapi", "23")
-          s = set_key(s, "android.ndk_api", "23")
+          s = set_key(s, "android.minapi", "24")
+          s = set_key(s, "android.ndk_api", "24")
           s = set_key(s, "p4a.bootstrap", "sdl2")
           s = set_key(s, "log_level", "2")
 

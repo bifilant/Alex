@@ -10,7 +10,7 @@ orientation = landscape
 fullscreen = 0
 android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.api = 33
-android.minapi = 23
+android.minapi = 24
 android.ndk = 25b
 android.archs = arm64-v8a
 p4a.branch = master
@@ -19,7 +19,7 @@ p4a.branch = master
 log_level = 2
 warn_on_root = 1
 
-android.ndk_api = 23
+android.ndk_api = 24
 p4a.bootstrap = sdl2
 
 
