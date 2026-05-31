@@ -16,27 +16,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Patch buildozer.spec
+      - name: Patch buildozer.spec and remove BOM
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path("buildozer.spec")
-          s = p.read_text(encoding="utf-8", errors="ignore")
+
+          raw = p.read_bytes()
+          if raw.startswith(b"\xef\xbb\xbf"):
+              raw = raw[3:]
+
+          s = raw.decode("utf-8", errors="ignore")
+          s = s.lstrip("\ufeff")
+
           def set_key(text, key, value):
               lines = text.splitlines()
               found = False
               out = []
               for line in lines:
-                  stripped = line.strip()
+                  stripped = line.strip().lstrip("\ufeff")
                   if stripped.startswith(key + " ") or stripped.startswith(key + "="):
                       out.append(f"{key} = {value}")
                       found = True
                   else:
-                      out.append(line)
+                      out.append(line.lstrip("\ufeff"))
               if not found:
                   out.append(f"{key} = {value}")
               return "\n".join(out) + "\n"
+
           s = set_key(s, "requirements", "python3,kivy")
           s = set_key(s, "android.archs", "arm64-v8a")
           s = set_key(s, "android.api", "33")
@@ -44,7 +53,10 @@ jobs:
           s = set_key(s, "android.ndk_api", "23")
           s = set_key(s, "p4a.bootstrap", "sdl2")
           s = set_key(s, "log_level", "2")
-          p.write_text(s, encoding="utf-8")
+
+          p.write_bytes(s.encode("utf-8"))
+          print("First bytes:", p.read_bytes()[:8])
+          print("First line:", p.read_text(encoding="utf-8", errors="ignore").splitlines()[0])
           PY
 
       - name: Build APK in official Kivy Buildozer Docker image
@@ -55,13 +67,22 @@ jobs:
             -v "$PWD":/home/user/hostcwd \
             -w /home/user/hostcwd \
             ghcr.io/kivy/buildozer:latest \
-            bash -lc "buildozer -v android debug"
+            bash -lc "python3 - <<'PY'
+          from pathlib import Path
+          p=Path('buildozer.spec')
+          raw=p.read_bytes()
+          if raw.startswith(b'\xef\xbb\xbf'):
+              raw=raw[3:]
+          p.write_bytes(raw)
+          print('spec first bytes in docker:', p.read_bytes()[:8])
+          PY
+          buildozer -v android debug"
 
       - name: Show generated files
         if: always()
         shell: bash
         run: |
-          find . -maxdepth 3 -type f \( -name "*.apk" -o -name "*.aab" \) -print || true
+          find . -maxdepth 5 -type f \( -name "*.apk" -o -name "*.aab" \) -print || true
           ls -la bin || true
 
       - name: Upload APK artifact

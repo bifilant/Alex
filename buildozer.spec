@@ -1,4 +1,4 @@
-﻿[app]
+[app]
 title = Capillimetry
 package.name = capillimetry
 package.domain = org.capillimetry
