@@ -53,6 +53,7 @@ jobs:
           s = set_key(s, "android.ndk_api", "24")
           s = set_key(s, "p4a.bootstrap", "sdl2")
           s = set_key(s, "log_level", "2")
+          s = set_key(s, "orientation", "landscape")
 
           p.write_bytes(s.encode("utf-8"))
           print("First bytes:", p.read_bytes()[:8])
