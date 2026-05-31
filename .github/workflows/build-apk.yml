@@ -1,0 +1,69 @@
+﻿name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            python3-pip python3-venv git zip unzip openjdk-17-jdk \
+            autoconf libtool pkg-config zlib1g-dev \
+            libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev build-essential
+
+      - name: Install Buildozer
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install "cython==0.29.37" "buildozer==1.6.0"
+
+      - name: Patch buildozer.spec
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("buildozer.spec")
+          s = p.read_text(encoding="utf-8", errors="ignore")
+          def set_key(text, key, value):
+              lines = text.splitlines()
+              found = False
+              out = []
+              for line in lines:
+                  stripped = line.strip()
+                  if stripped.startswith(key + " ") or stripped.startswith(key + "="):
+                      out.append(f"{key} = {value}")
+                      found = True
+                  else:
+                      out.append(line)
+              if not found:
+                  out.append(f"{key} = {value}")
+              return "\n".join(out) + "\n"
+          s = set_key(s, "requirements", "python3,kivy")
+          s = set_key(s, "android.archs", "arm64-v8a")
+          s = set_key(s, "android.api", "33")
+          s = set_key(s, "android.minapi", "23")
+          s = set_key(s, "android.ndk_api", "23")
+          s = set_key(s, "p4a.bootstrap", "sdl2")
+          s = set_key(s, "log_level", "2")
+          p.write_text(s, encoding="utf-8")
+          PY
+
+      - name: Build APK
+        run: |
+          buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CapillAPK-debug-apk
+          path: bin/*.apk
